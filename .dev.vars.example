@@ -1,0 +1,4 @@
+# Optional: enables the LLM engine + rubric. Without it, PedSim runs on the
+# deterministic rule engine. Copy to .dev.vars for local `pnpm preview`.
+ANTHROPIC_API_KEY=sk-ant-...
+PEDSIM_MODEL=claude-sonnet-5

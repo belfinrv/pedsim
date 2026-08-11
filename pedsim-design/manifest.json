@@ -1,0 +1,39 @@
+{
+  "scenario_id": "respiratory-0406b500",
+  "seed": 779909,
+  "config": {
+    "content_domain": "respiratory",
+    "learning_objectives": [
+      "Elicit complete asthma/respiratory symptom history from a school-age child",
+      "Build rapport with a shy child before asking sensitive questions",
+      "Counsel child and parent on findings in age-appropriate language"
+    ],
+    "age_range": [
+      6,
+      10
+    ],
+    "temperament": "shy",
+    "parent": {
+      "present": true,
+      "style": "anxious"
+    },
+    "location": {
+      "state": "North Carolina",
+      "city": "Charlotte"
+    },
+    "batch_size": 40,
+    "seed": null
+  },
+  "abp_epa": "EPA 2: Manage common acute and chronic conditions",
+  "patient": {
+    "id": "546cbf58-9dfe-9dfa-823b-3b34024075df",
+    "name": "Ed Rempel",
+    "birthDate": "2019-01-02",
+    "gender": "male",
+    "mrn": "546cbf58-9dfe-9dfa-823b-3b34024075df",
+    "address": "Charlotte, NC",
+    "language": "English (United States)",
+    "race": "White",
+    "ethnicity": "Not Hispanic or Latino"
+  }
+}

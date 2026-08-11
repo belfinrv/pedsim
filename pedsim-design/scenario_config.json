@@ -1,0 +1,23 @@
+{
+  "content_domain": "respiratory",
+  "learning_objectives": [
+    "Elicit complete asthma/respiratory symptom history from a school-age child",
+    "Build rapport with a shy child before asking sensitive questions",
+    "Counsel child and parent on findings in age-appropriate language"
+  ],
+  "age_range": [
+    6,
+    10
+  ],
+  "temperament": "shy",
+  "parent": {
+    "present": true,
+    "style": "anxious"
+  },
+  "location": {
+    "state": "North Carolina",
+    "city": "Charlotte"
+  },
+  "batch_size": 40,
+  "seed": null
+}

@@ -1,0 +1,31 @@
+{
+  "learning_objectives": [
+    "Elicit complete asthma/respiratory symptom history from a school-age child",
+    "Build rapport with a shy child before asking sensitive questions",
+    "Counsel child and parent on findings in age-appropriate language"
+  ],
+  "key_facts": [
+    {
+      "id": "fact-001",
+      "category": "condition",
+      "fact": "Acute bronchitis (disorder) (resolved)",
+      "domain_relevant": true,
+      "elicit_via": "symptom history questions"
+    },
+    {
+      "id": "fact-002",
+      "category": "condition",
+      "fact": "Acute bronchitis (disorder) (active)",
+      "domain_relevant": true,
+      "elicit_via": "symptom history questions"
+    },
+    {
+      "id": "fact-003",
+      "category": "medication",
+      "fact": "Takes/took: Acetaminophen 21.7 MG/ML / Dextromethorphan Hydrobromide 1 MG/ML / doxylamine succinate 0.417 MG/ML Oral Solution",
+      "domain_relevant": false,
+      "elicit_via": "medication history questions"
+    }
+  ],
+  "scoring_note": "History completeness = domain-relevant facts surfaced in transcript / total domain-relevant facts."
+}
