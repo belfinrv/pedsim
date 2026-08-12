@@ -8,6 +8,7 @@ import {
   CornerDownLeft,
   Mic,
   RotateCcw,
+  Settings2,
   Sparkles,
   Volume2,
   VolumeX,
@@ -22,6 +23,8 @@ import {
   cancelSpeech,
   type SpeakHandle,
 } from "@/lib/pedsim/speech"
+import { useAvatarSettings } from "@/lib/pedsim/avatar-settings"
+import { AvatarSettingsPanel } from "@/components/avatar/avatar-settings"
 import type { TranscriptTurn } from "@/lib/pedsim/types"
 
 // The 3D avatar is client-only (WebGL) — load it without SSR.
@@ -86,13 +89,17 @@ export default function EncounterPage() {
   )
   const [caption, setCaption] = useState<string>("")
   const [listening, setListening] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const speakHandle = useRef<SpeakHandle | null>(null)
+  const { settings, update: updateSettings, reset: resetSettings } =
+    useAvatarSettings()
 
   const persona = scenario.persona
   const threshold = persona.rapport.disclosure_threshold
   const domainFacts = scenario.answer_key.key_facts.filter((f) => f.domain_relevant)
   const avatarUrl =
+    (/^https?:\/\//.test(settings.avatarUrl) ? settings.avatarUrl : null) ||
     AVATAR_URL ||
     (/^https?:\/\//.test(scenario.avatar.model_url)
       ? scenario.avatar.model_url
@@ -107,6 +114,9 @@ export default function EncounterPage() {
       setCaption(childText)
       speakHandle.current = await speak(childText, "child", {
         enabled: voiceOn,
+        pitch: settings.childPitch,
+        rate: settings.childRate,
+        voiceName: settings.childVoice,
         onEnd: () => {
           if (parentText) runParent()
           else {
@@ -277,7 +287,23 @@ export default function EncounterPage() {
                 <VolumeX className="size-4 text-muted-foreground" />
               )}
             </button>
+            <button
+              onClick={() => setSettingsOpen((o) => !o)}
+              title="Avatar & voice settings"
+              className="grid size-8 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background"
+            >
+              <Settings2 className="size-4" />
+            </button>
           </div>
+          {settingsOpen && (
+            <AvatarSettingsPanel
+              settings={settings}
+              onUpdate={updateSettings}
+              onReset={resetSettings}
+              onClose={() => setSettingsOpen(false)}
+              childName={persona.child.name}
+            />
+          )}
         </div>
 
         {/* live caption (kept clear of the face) */}

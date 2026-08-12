@@ -74,6 +74,9 @@ production upgrades). Extras:
   where supported (Chrome/Edge).
 - Child and parent lines use distinct voices; stage directions in *asterisks*
   are stripped before speaking.
+- **In-app settings panel** (⚙ on the avatar): paste an avatar URL, pick the
+  child voice, and tune pitch/rate with a **Test voice** button — saved to
+  `localStorage`, no file editing needed.
 
 By default it shows a lightweight **stylized head** (self-contained, always
 works offline). For a **photorealistic avatar**, point it at a Ready Player Me

@@ -67,10 +67,19 @@ export interface SpeakHandle {
   cancel: () => void
 }
 
+export interface SpeakOpts {
+  onStart?: () => void
+  onEnd?: () => void
+  enabled?: boolean
+  pitch?: number
+  rate?: number
+  voiceName?: string
+}
+
 export async function speak(
   text: string,
   role: VoiceRole,
-  opts: { onStart?: () => void; onEnd?: () => void; enabled?: boolean } = {},
+  opts: SpeakOpts = {},
 ): Promise<SpeakHandle> {
   const cleaned = stripForSpeech(text)
   if (!speechSupported() || opts.enabled === false || !cleaned) {
@@ -83,17 +92,19 @@ export async function speak(
 
   const voices = await loadVoices()
   const u = new SpeechSynthesisUtterance(cleaned)
-  const v = pickVoice(voices, role)
+  const named =
+    opts.voiceName && voices.find((v) => v.name === opts.voiceName)
+  const v = named || pickVoice(voices, role)
   if (v) u.voice = v
   if (role === "child") {
     // Higher pitch + slightly slower, clearer cadence reads as a young child.
-    u.pitch = 1.9
-    u.rate = 0.9
+    u.pitch = opts.pitch ?? 1.9
+    u.rate = opts.rate ?? 0.9
     u.volume = 1
   } else {
     // Warm adult parent.
-    u.pitch = 1.05
-    u.rate = 1.0
+    u.pitch = opts.pitch ?? 1.05
+    u.rate = opts.rate ?? 1.0
   }
   u.onstart = () => opts.onStart?.()
   u.onend = () => opts.onEnd?.()
@@ -111,6 +122,15 @@ export async function speak(
 
 export function cancelSpeech() {
   if (speechSupported()) window.speechSynthesis.cancel()
+}
+
+// For the settings voice picker: English voices, name + lang.
+export async function listVoices(): Promise<
+  { name: string; lang: string }[]
+> {
+  const voices = await loadVoices()
+  const en = voices.filter((v) => /^en(-|_|$)/i.test(v.lang))
+  return (en.length ? en : voices).map((v) => ({ name: v.name, lang: v.lang }))
 }
 
 // ── Optional voice input (doctor dictation) ───────────────────────────────
