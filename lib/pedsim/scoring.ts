@@ -214,8 +214,8 @@ export function scoreRubricHeuristic(input: ScoreInput): RubricDomainScore[] {
     rationale: t.planTurns.length
       ? "Explained the plan/findings; " +
         (t.reassuringTurns.length
-          ? "offered reassurance to the anxious parent."
-          : "could reassure the anxious parent more explicitly.")
+          ? `handled the ${input.persona.parent.style} parent with reassurance.`
+          : `could address the ${input.persona.parent.style} parent more explicitly.`)
       : "Did not clearly counsel the child/parent on findings or next steps.",
     evidence: excerpts(
       t.planTurns.length ? t.planTurns : t.reassuringTurns,
