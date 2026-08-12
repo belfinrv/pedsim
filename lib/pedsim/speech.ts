@@ -218,6 +218,24 @@ export function recognitionSupported(): boolean {
   return getRecognitionCtor() !== null
 }
 
+export function recordingSupported(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof MediaRecorder !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia
+  )
+}
+
+// Which speech-to-text backend to use for the doctor's dictation:
+//  - "browser"  : Web Speech API (Chrome/Edge) — instant, hands-free
+//  - "whisper"  : record audio + POST to /api/stt (any browser incl. Firefox/Safari)
+//  - "none"     : no mic available
+export function sttBackend(): "browser" | "whisper" | "none" {
+  if (recognitionSupported()) return "browser"
+  if (recordingSupported()) return "whisper"
+  return "none"
+}
+
 export function listenOnce(
   onText: (text: string) => void,
   onEnd?: () => void,
@@ -236,4 +254,101 @@ export function listenOnce(
   rec.onerror = () => onEnd?.()
   rec.start()
   return { stop: () => rec.stop() }
+}
+
+// Hands-free continuous dictation (Chrome/Edge). Streams interim text live and
+// auto-fires onFinal after a short pause, so the doctor can just talk.
+export function listenContinuous(cb: {
+  onInterim?: (text: string) => void
+  onFinal: (text: string) => void
+  onEnd?: () => void
+}): { stop: () => void } | null {
+  if (typeof window === "undefined") return null
+  const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+  const Ctor = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
+    | (new () => Record<string, unknown>)
+    | undefined
+  if (!Ctor) return null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rec: any = new Ctor()
+  rec.lang = "en-US"
+  rec.interimResults = true
+  rec.continuous = true
+  let finalText = ""
+  let silence: ReturnType<typeof setTimeout> | null = null
+  let stopped = false
+  const flush = () => {
+    const t = finalText.trim()
+    finalText = ""
+    if (t) cb.onFinal(t)
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rec.onresult = (e: any) => {
+    let interim = ""
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i]
+      if (r.isFinal) finalText += r[0].transcript + " "
+      else interim += r[0].transcript
+    }
+    cb.onInterim?.(`${finalText}${interim}`.trim())
+    if (silence) clearTimeout(silence)
+    silence = setTimeout(flush, 1300) // send after ~1.3s of quiet
+  }
+  rec.onerror = () => {}
+  rec.onend = () => {
+    if (silence) clearTimeout(silence)
+    flush()
+    cb.onEnd?.()
+  }
+  rec.start()
+  return {
+    stop: () => {
+      if (stopped) return
+      stopped = true
+      if (silence) clearTimeout(silence)
+      try {
+        rec.stop()
+      } catch {
+        /* ignore */
+      }
+    },
+  }
+}
+
+// Record via MediaRecorder and transcribe through /api/stt (Whisper). Works in
+// any browser with a mic. Returns a handle whose stop() resolves to the text.
+export async function recordAndTranscribe(onState?: (
+  s: "recording" | "transcribing",
+) => void): Promise<{ stop: () => Promise<string> }> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const rec = new MediaRecorder(stream)
+  const chunks: Blob[] = []
+  rec.ondataavailable = (e) => {
+    if (e.data.size) chunks.push(e.data)
+  }
+  rec.start()
+  onState?.("recording")
+  return {
+    stop: () =>
+      new Promise<string>((resolve) => {
+        rec.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop())
+          onState?.("transcribing")
+          const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" })
+          try {
+            const res = await fetch("/api/stt", {
+              method: "POST",
+              headers: { "content-type": blob.type },
+              body: blob,
+            })
+            if (!res.ok) throw new Error(`stt ${res.status}`)
+            const d = (await res.json()) as { text?: string }
+            resolve((d.text || "").trim())
+          } catch {
+            resolve("")
+          }
+        }
+        rec.stop()
+      }),
+  }
 }

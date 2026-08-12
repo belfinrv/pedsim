@@ -17,8 +17,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePedSim } from "@/components/provider"
 import {
-  listenOnce,
-  recognitionSupported,
+  listenContinuous,
+  recordAndTranscribe,
+  sttBackend,
   speak,
   speakHd,
   cancelSpeech,
@@ -91,9 +92,12 @@ export default function EncounterPage() {
   )
   const [caption, setCaption] = useState<string>("")
   const [listening, setListening] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const speakHandle = useRef<SpeakHandle | null>(null)
+  const contHandle = useRef<{ stop: () => void } | null>(null)
+  const recHandle = useRef<{ stop: () => Promise<string> } | null>(null)
   const { settings, update: updateSettings, reset: resetSettings } =
     useAvatarSettings()
 
@@ -148,11 +152,12 @@ export default function EncounterPage() {
     runChild()
   }
 
-  // Stop any speech when leaving the screen.
+  // Stop any speech + dictation when leaving the screen.
   useEffect(
     () => () => {
       cancelSpeech()
       cancelHd()
+      contHandle.current?.stop()
     },
     [],
   )
@@ -247,6 +252,7 @@ export default function EncounterPage() {
   const finish = () => {
     cancelSpeech()
     cancelHd()
+    contHandle.current?.stop()
     endEncounter()
     router.push("/report")
   }
@@ -261,18 +267,55 @@ export default function EncounterPage() {
     })
   }
 
-  const startListening = () => {
-    if (listening) return
-    const handle = listenOnce(
-      (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
-      () => setListening(false),
-    )
-    if (handle) setListening(true)
+  const micBackend = sttBackend()
+
+  const toggleMic = async () => {
+    if (micBackend === "browser") {
+      // Hands-free continuous dictation: interim shows live, auto-sends on pause.
+      if (listening) {
+        contHandle.current?.stop()
+        return
+      }
+      const h = listenContinuous({
+        onInterim: (t) => setInput(t),
+        onFinal: (t) => {
+          setInput("")
+          send(t)
+        },
+        onEnd: () => setListening(false),
+      })
+      if (h) {
+        contHandle.current = h
+        setListening(true)
+      }
+    } else if (micBackend === "whisper") {
+      // Record → transcribe via /api/stt (Whisper) for non-Chrome browsers.
+      if (listening) {
+        const rec = recHandle.current
+        recHandle.current = null
+        setListening(false)
+        if (rec) {
+          const text = await rec.stop()
+          if (text) setInput((p) => (p ? `${p} ${text}` : text))
+        }
+        setTranscribing(false)
+        return
+      }
+      try {
+        const rec = await recordAndTranscribe((s) =>
+          setTranscribing(s === "transcribing"),
+        )
+        recHandle.current = rec
+        setListening(true)
+      } catch {
+        /* mic permission denied */
+      }
+    }
   }
 
   const disclosing = rapport >= threshold
   const doctorTurns = transcript.filter((t) => t.speaker === "doctor").length
-  const micOk = recognitionSupported()
+  const micOk = micBackend !== "none"
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
@@ -441,9 +484,20 @@ export default function EncounterPage() {
               type="button"
               size="icon-lg"
               variant={listening ? "default" : "outline"}
-              onClick={startListening}
-              title="Dictate (speech-to-text)"
-              className={listening ? "animate-pulse" : ""}
+              onClick={toggleMic}
+              disabled={transcribing}
+              title={
+                transcribing
+                  ? "Transcribing…"
+                  : listening
+                    ? micBackend === "whisper"
+                      ? "Stop & transcribe"
+                      : "Stop dictation"
+                    : micBackend === "whisper"
+                      ? "Record (speech-to-text)"
+                      : "Dictate hands-free"
+              }
+              className={listening || transcribing ? "animate-pulse" : ""}
             >
               <Mic className="size-4" />
             </Button>

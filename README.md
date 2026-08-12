@@ -88,8 +88,11 @@ API by default, so it works with **no keys and no cost**, and can upgrade to a
 **neural edge-tts child voice** (see below). Extras:
 
 - **Voice on/off** toggle and a **live caption** under the face.
-- **Mic dictation** for the doctor (🎤) via the browser SpeechRecognition API,
-  where supported (Chrome/Edge).
+- **Mic dictation** for the doctor (🎤). On Chrome/Edge it's **hands-free
+  continuous** — talk, and it transcribes live and auto-sends after a pause. On
+  other browsers (Firefox/Safari) it records and transcribes via a local
+  **Whisper** route (`/api/stt`, `pip install faster-whisper`); if Whisper isn't
+  installed it just falls back to typing.
 - Child and parent lines use distinct voices; stage directions in *asterisks*
   are stripped before speaking.
 - **In-app settings panel** (⚙ on the avatar): paste an avatar URL, pick the
@@ -168,6 +171,22 @@ PEDSIM_MODEL=claude-sonnet-5      # optional; this is the default
 With the key set, the LLM writes the child/parent dialogue and grades the
 rubric, while rapport math and fact bookkeeping stay deterministic on the
 server. Without it, the rule-based engine handles both.
+
+### Speech-to-text (doctor dictation)
+
+The 🎤 button in the encounter picks the best backend automatically:
+
+- **Chrome / Edge** → the Web Speech API, **hands-free**: interim words appear
+  live and the turn auto-sends ~1.3 s after you stop talking. No setup.
+- **Any other browser** → records with `MediaRecorder` and transcribes through
+  the local **Whisper** route. Enable it once:
+  ```bash
+  pip install faster-whisper        # same env you run the dev server from
+  ```
+  First use downloads the model (`base.en`, ~150 MB; override with
+  `PEDSIM_WHISPER_MODEL`). faster-whisper decodes the audio itself — no ffmpeg
+  needed. Worker: `scripts/whisper_stt.py`; route: `app/api/stt`. Local only
+  (subprocess); on Cloudflare the browser recognizer / typing is used instead.
 
 ## Deploying to Cloudflare Workers
 

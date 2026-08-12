@@ -74,6 +74,20 @@ the avatar, and tick **HD child voice (edge-tts)**. Use **Test voice** to hear
 it. If it's not installed or you're offline, PedSim just uses the browser voice
 — nothing breaks.
 
+## 5c. (Optional) Speech-to-text for the doctor
+
+The 🎤 button in the Encounter lets you dictate instead of typing.
+
+- **Chrome / Edge:** works out of the box — click it and just talk (hands-free;
+  it auto-sends when you pause).
+- **Firefox / Safari (or for higher accuracy):** enable local Whisper in your
+  conda/PowerShell environment:
+  ```powershell
+  pip install faster-whisper
+  ```
+  Then restart `npm run dev`. The first dictation downloads the model
+  (~150 MB). Without it, dictation just falls back to typing.
+
 ## 6. Later: get updates
 
 ```powershell
