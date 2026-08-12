@@ -121,6 +121,7 @@ export default function EncounterPage() {
         pitch: settings.childPitch,
         rate: settings.childRate,
         voiceName: settings.childVoice,
+        hdVoice: settings.childHdVoice,
         onEnd: () => {
           if (parentText) runParent()
           else {
@@ -136,6 +137,7 @@ export default function EncounterPage() {
       setCaption(parentText as string)
       speakHandle.current = await say(parentText as string, "parent", {
         enabled: voiceOn,
+        hdVoice: settings.parentHdVoice,
         onEnd: () => {
           setSpeaking(false)
           setActiveSpeaker(null)
@@ -272,7 +274,7 @@ export default function EncounterPage() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
       {/* Chat column */}
-      <div className="flex h-[calc(100vh-160px)] min-h-[520px] flex-col rounded-xl border border-border bg-card">
+      <div className="relative flex h-[calc(100vh-160px)] min-h-[520px] flex-col rounded-xl border border-border bg-card">
         {/* 3D avatar stage */}
         <div className="relative h-[280px] shrink-0 overflow-hidden rounded-t-xl border-b border-border bg-[#eef2f8]">
           <AvatarStage
@@ -309,16 +311,17 @@ export default function EncounterPage() {
               <Settings2 className="size-4" />
             </button>
           </div>
-          {settingsOpen && (
-            <AvatarSettingsPanel
-              settings={settings}
-              onUpdate={updateSettings}
-              onReset={resetSettings}
-              onClose={() => setSettingsOpen(false)}
-              childName={persona.child.name}
-            />
-          )}
         </div>
+
+        {settingsOpen && (
+          <AvatarSettingsPanel
+            settings={settings}
+            onUpdate={updateSettings}
+            onReset={resetSettings}
+            onClose={() => setSettingsOpen(false)}
+            childName={persona.child.name}
+          />
+        )}
 
         {/* live caption (kept clear of the face) */}
         {caption && (

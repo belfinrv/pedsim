@@ -5,7 +5,7 @@ import { RotateCcw, Volume2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { listVoices, speak, speakHd, cancelSpeech } from "@/lib/pedsim/speech"
-import type { AvatarSettings } from "@/lib/pedsim/avatar-settings"
+import { HD_VOICES, type AvatarSettings } from "@/lib/pedsim/avatar-settings"
 
 export function AvatarSettingsPanel({
   settings,
@@ -32,7 +32,7 @@ export function AvatarSettingsPanel({
     cancelSpeech()
     const line = `Hi! I'm ${childName}. Is this how I sound?`
     if (settings.hdVoice) {
-      speakHd(line, "child", { enabled: true })
+      speakHd(line, "child", { enabled: true, hdVoice: settings.childHdVoice })
     } else {
       speak(line, "child", {
         enabled: true,
@@ -43,8 +43,17 @@ export function AvatarSettingsPanel({
     }
   }
 
+  const testHd = (role: "child" | "parent", voice: string) => {
+    cancelSpeech()
+    const line =
+      role === "child"
+        ? `Hi! I'm ${childName}. Is this how I sound?`
+        : "Doctor, is he going to be okay?"
+    speakHd(line, role, { enabled: true, hdVoice: voice })
+  }
+
   return (
-    <div className="absolute right-3 top-12 z-20 w-[300px] rounded-xl border border-border bg-card p-4 shadow-xl">
+    <div className="absolute right-3 top-14 z-40 max-h-[80%] w-[300px] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-xl">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-semibold">Avatar &amp; voice</p>
         <button
@@ -109,6 +118,26 @@ export function AvatarSettingsPanel({
           </span>
         </label>
 
+        {/* HD voice pickers (child + parent) */}
+        {settings.hdVoice && (
+          <div className="space-y-3 rounded-md border border-border p-2">
+            <HdVoicePicker
+              label="Child voice"
+              value={settings.childHdVoice}
+              options={HD_VOICES.child}
+              onChange={(v) => onUpdate({ childHdVoice: v })}
+              onTest={(v) => testHd("child", v)}
+            />
+            <HdVoicePicker
+              label="Parent voice"
+              value={settings.parentHdVoice}
+              options={HD_VOICES.parent}
+              onChange={(v) => onUpdate({ parentHdVoice: v })}
+              onTest={(v) => testHd("parent", v)}
+            />
+          </div>
+        )}
+
         {/* Voice picker (browser voice) */}
         <div
           className={`space-y-1.5 ${settings.hdVoice ? "pointer-events-none opacity-40" : ""}`}
@@ -164,6 +193,48 @@ export function AvatarSettingsPanel({
             <RotateCcw className="size-3.5" /> Reset
           </Button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function HdVoicePicker({
+  label,
+  value,
+  options,
+  onChange,
+  onTest,
+}: {
+  label: string
+  value: string
+  options: readonly { id: string; label: string }[]
+  onChange: (v: string) => void
+  onTest: (v: string) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex gap-1.5">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-2 text-xs"
+          onClick={() => onTest(value)}
+          title="Test this voice"
+        >
+          <Volume2 className="size-3.5" />
+        </Button>
       </div>
     </div>
   )

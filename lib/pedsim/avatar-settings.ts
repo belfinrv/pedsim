@@ -10,7 +10,9 @@ export interface AvatarSettings {
   childPitch: number // 0.5 – 2   (browser voice only)
   childRate: number // 0.5 – 1.5  (browser voice only)
   childVoice: string // voice name, "" = auto-pick (browser voice only)
-  hdVoice: boolean // use edge-tts (/api/tts) neural child voice
+  hdVoice: boolean // use edge-tts (/api/tts) neural voices
+  childHdVoice: string // edge-tts voice for the child
+  parentHdVoice: string // edge-tts voice for the parent
 }
 
 export const DEFAULT_SETTINGS: AvatarSettings = {
@@ -19,7 +21,24 @@ export const DEFAULT_SETTINGS: AvatarSettings = {
   childRate: 0.9,
   childVoice: "",
   hdVoice: false,
+  childHdVoice: "en-US-AnaNeural",
+  parentHdVoice: "en-US-AriaNeural",
 }
+
+// Curated edge-tts neural voices for the settings dropdowns.
+export const HD_VOICES = {
+  child: [{ id: "en-US-AnaNeural", label: "Ana — child" }],
+  parent: [
+    { id: "en-US-AriaNeural", label: "Aria — mom (warm)" },
+    { id: "en-US-JennyNeural", label: "Jenny — mom (friendly)" },
+    { id: "en-US-MichelleNeural", label: "Michelle — mom (calm)" },
+    { id: "en-US-SaraNeural", label: "Sara — mom (bright)" },
+    { id: "en-US-GuyNeural", label: "Guy — dad (warm)" },
+    { id: "en-US-ChristopherNeural", label: "Christopher — dad (deep)" },
+    { id: "en-US-EricNeural", label: "Eric — dad (calm)" },
+    { id: "en-US-RogerNeural", label: "Roger — dad (mature)" },
+  ],
+} as const
 
 const KEY = "pedsim.avatar.settings.v1"
 

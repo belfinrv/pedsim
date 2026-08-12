@@ -104,12 +104,14 @@ named in ARCHITECTURE.md §2.6). It runs locally via a small server route
 pip install edge-tts        # in the same environment you run the dev server from
 ```
 
-Then in the encounter's **⚙ settings**, tick **HD child voice (edge-tts)**.
-Replies are synthesized server-side and streamed as MP3. If edge-tts isn't
-installed (or you're offline, or on Cloudflare Workers where subprocesses
-aren't available), the app silently falls back to the browser voice — so it's a
-pure upgrade with no hard dependency. Override the command with
-`PEDSIM_EDGE_TTS_CMD` if `edge-tts` isn't on your PATH.
+Then in the encounter's **⚙ settings**, tick **HD child voice (edge-tts)** and
+pick a **child voice** (Ana) and a **parent voice** — the parent can be a mom
+(Aria / Jenny / Michelle / Sara) or a dad (Guy / Christopher / Eric / Roger),
+each with its own Test button. Replies are synthesized server-side and streamed
+as MP3. If edge-tts isn't installed (or you're offline, or on Cloudflare Workers
+where subprocesses aren't available), the app silently falls back to the browser
+voice — so it's a pure upgrade with no hard dependency. Override the command
+with `PEDSIM_EDGE_TTS_CMD` if `edge-tts` isn't on your PATH.
 
 ## Scoring
 

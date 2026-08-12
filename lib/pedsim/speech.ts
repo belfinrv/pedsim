@@ -74,6 +74,7 @@ export interface SpeakOpts {
   pitch?: number
   rate?: number
   voiceName?: string
+  hdVoice?: string // explicit edge-tts voice id (speakHd only)
 }
 
 export async function speak(
@@ -145,7 +146,7 @@ export async function speakHd(
     const res = await fetch("/api/tts", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: cleaned, role }),
+      body: JSON.stringify({ text: cleaned, role, voice: opts.hdVoice }),
     })
     if (!res.ok) throw new Error(`tts ${res.status}`)
     const buf = await res.arrayBuffer()
