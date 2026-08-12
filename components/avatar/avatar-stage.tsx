@@ -89,8 +89,9 @@ function PrimitiveHead({
     }
     if (mouthRef.current) {
       const open = mouth.current
-      mouthRef.current.scale.set(0.5 + smile * 0.28, 0.12 + open * 0.6, 0.6)
-      mouthRef.current.position.y = -0.42 + smile * 0.02
+      // Smaller child mouth.
+      mouthRef.current.scale.set(0.4 + smile * 0.22, 0.09 + open * 0.5, 0.5)
+      mouthRef.current.position.y = -0.46 + smile * 0.02
     }
     // Cartoon blink: squash the whole eye vertically for a moment.
     const eyeScale = 1 - blink.current * 0.85
@@ -103,14 +104,14 @@ function PrimitiveHead({
 
   return (
     <group ref={group} position={[0, 0.32, 0]}>
-      {/* head */}
-      <mesh castShadow>
+      {/* head — rounder & slightly wider for a child's proportions */}
+      <mesh castShadow scale={[1.06, 1.02, 1.0]}>
         <sphereGeometry args={[1, 48, 48]} />
-        <meshStandardMaterial color={skin} roughness={0.8} />
+        <meshStandardMaterial color={skin} roughness={0.85} />
       </mesh>
-      {/* hair cap */}
-      <mesh position={[0, 0.42, -0.05]} scale={[1.03, 0.8, 1.03]}>
-        <sphereGeometry args={[1, 40, 40, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
+      {/* hair cap (higher, kid-like fringe) */}
+      <mesh position={[0, 0.48, -0.03]} scale={[1.1, 0.78, 1.08]}>
+        <sphereGeometry args={[1, 40, 40, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
         <meshStandardMaterial color={hair} roughness={0.9} />
       </mesh>
       {/* ears */}
@@ -122,48 +123,52 @@ function PrimitiveHead({
         <sphereGeometry args={[0.18, 16, 16]} />
         <meshStandardMaterial color={skin} roughness={0.8} />
       </mesh>
-      {/* eyes (whole eye squashes to blink) */}
-      {[-0.36, 0.36].map((x, i) => (
-        <group key={i} ref={i === 0 ? eyeL : eyeR} position={[x, 0.14, 0.84]}>
+      {/* eyes — big and set lower (baby-schema reads as young) */}
+      {[-0.33, 0.33].map((x, i) => (
+        <group key={i} ref={i === 0 ? eyeL : eyeR} position={[x, 0.02, 0.82]}>
           <mesh>
-            <sphereGeometry args={[0.2, 24, 24]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
+            <sphereGeometry args={[0.24, 28, 28]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.25} />
           </mesh>
-          <mesh position={[0, -0.01, 0.15]}>
-            <sphereGeometry args={[0.09, 20, 20]} />
-            <meshStandardMaterial color="#4a3527" roughness={0.2} />
+          <mesh position={[0, -0.02, 0.17]}>
+            <sphereGeometry args={[0.13, 22, 22]} />
+            <meshStandardMaterial color="#5a4433" roughness={0.15} />
           </mesh>
-          <mesh position={[0.03, 0.03, 0.2]}>
-            <sphereGeometry args={[0.03, 12, 12]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.1} />
+          <mesh position={[0, -0.02, 0.27]}>
+            <sphereGeometry args={[0.06, 18, 18]} />
+            <meshStandardMaterial color="#20160f" roughness={0.1} />
+          </mesh>
+          <mesh position={[0.05, 0.05, 0.3]}>
+            <sphereGeometry args={[0.035, 12, 12]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.05} />
           </mesh>
         </group>
       ))}
-      {/* eyebrows */}
-      {[-0.36, 0.36].map((x, i) => (
-        <mesh key={i} position={[x, 0.46, 0.92]} rotation={[0, 0, x < 0 ? 0.06 : -0.06]}>
-          <boxGeometry args={[0.26, 0.045, 0.06]} />
+      {/* eyebrows — thin, high, soft */}
+      {[-0.33, 0.33].map((x, i) => (
+        <mesh key={i} position={[x, 0.4, 0.9]} rotation={[0, 0, x < 0 ? 0.04 : -0.04]}>
+          <boxGeometry args={[0.24, 0.035, 0.05]} />
           <meshStandardMaterial color={hair} roughness={0.9} />
         </mesh>
       ))}
-      {/* nose */}
-      <mesh position={[0, -0.12, 1]}>
-        <sphereGeometry args={[0.12, 16, 16]} />
-        <meshStandardMaterial color={skin} roughness={0.8} />
+      {/* small button nose */}
+      <mesh position={[0, -0.18, 0.98]}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshStandardMaterial color={skin} roughness={0.85} />
       </mesh>
       {/* mouth (lip-syncs) */}
-      <mesh ref={mouthRef} position={[0, -0.42, 0.9]}>
+      <mesh ref={mouthRef} position={[0, -0.46, 0.88]}>
         <sphereGeometry args={[0.3, 24, 16]} />
-        <meshStandardMaterial color="#a8433f" roughness={0.5} />
+        <meshStandardMaterial color="#c05a52" roughness={0.5} />
       </mesh>
-      {/* cheeks (warmth rises with rapport) */}
-      {[-0.5, 0.5].map((x, i) => (
-        <mesh key={i} position={[x, -0.18, 0.82]}>
-          <sphereGeometry args={[0.16, 16, 16]} />
+      {/* chubby cheeks — always a little rosy, warmer with rapport */}
+      {[-0.52, 0.52].map((x, i) => (
+        <mesh key={i} position={[x, -0.24, 0.76]}>
+          <sphereGeometry args={[0.24, 20, 20]} />
           <meshStandardMaterial
-            color="#f0a58c"
+            color="#f2a891"
             transparent
-            opacity={0.15 + smile * 0.5}
+            opacity={0.28 + smile * 0.4}
             roughness={0.9}
           />
         </mesh>

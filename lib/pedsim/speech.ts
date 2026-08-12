@@ -86,11 +86,14 @@ export async function speak(
   const v = pickVoice(voices, role)
   if (v) u.voice = v
   if (role === "child") {
-    u.pitch = 1.6 // childlike
-    u.rate = 0.98
+    // Higher pitch + slightly slower, clearer cadence reads as a young child.
+    u.pitch = 1.9
+    u.rate = 0.9
+    u.volume = 1
   } else {
-    u.pitch = 1.0
-    u.rate = 1.02
+    // Warm adult parent.
+    u.pitch = 1.05
+    u.rate = 1.0
   }
   u.onstart = () => opts.onStart?.()
   u.onend = () => opts.onEnd?.()
