@@ -93,6 +93,7 @@ export default function EncounterPage() {
   const [caption, setCaption] = useState<string>("")
   const [listening, setListening] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
+  const [interim, setInterim] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const speakHandle = useRef<SpeakHandle | null>(null)
@@ -277,12 +278,15 @@ export default function EncounterPage() {
         return
       }
       const h = listenContinuous({
-        onInterim: (t) => setInput(t),
+        onInterim: (t) => setInterim(t),
         onFinal: (t) => {
-          setInput("")
+          setInterim("")
           send(t)
         },
-        onEnd: () => setListening(false),
+        onEnd: () => {
+          setListening(false)
+          setInterim("")
+        },
       })
       if (h) {
         contHandle.current = h
@@ -357,6 +361,25 @@ export default function EncounterPage() {
               <Settings2 className="size-4" />
             </button>
           </div>
+
+          {/* live listening indicator with interim transcript */}
+          {(listening || transcribing) && (
+            <div className="absolute inset-x-3 bottom-3 z-10 flex items-center gap-2 rounded-lg bg-primary/90 px-3 py-2 text-sm text-primary-foreground shadow-lg">
+              <span className="relative flex size-3 shrink-0">
+                {!transcribing && (
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
+                )}
+                <span className="relative inline-flex size-3 rounded-full bg-white" />
+              </span>
+              <span className="truncate">
+                {transcribing
+                  ? "Transcribing…"
+                  : interim
+                    ? interim
+                    : "Listening… speak now"}
+              </span>
+            </div>
+          )}
         </div>
 
         {settingsOpen && (
