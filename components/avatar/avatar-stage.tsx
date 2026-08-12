@@ -152,8 +152,8 @@ function PrimitiveHead({
   return (
     <group ref={group} position={[0, 0.32, 0]}>
       {/* head */}
-      <mesh castShadow scale={headScale}>
-        <sphereGeometry args={[1, 48, 48]} />
+      <mesh scale={headScale}>
+        <sphereGeometry args={[1, 40, 32]} />
         <meshStandardMaterial color={skin} roughness={0.85} />
       </mesh>
       {/* hair cap */}
@@ -319,15 +319,14 @@ export default function AvatarStage({
 
   return (
     <Canvas
-      shadows
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       camera={{ position: useGlb ? [0, 0.1, 0.95] : [0, 0.32, 4.7], fov: 32 }}
-      gl={{ antialias: true, preserveDrawingBuffer: true }}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ width: "100%", height: "100%" }}
     >
       <color attach="background" args={["#eef2f8"]} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[2, 3, 4]} intensity={1.3} castShadow />
+      <ambientLight intensity={0.95} />
+      <directionalLight position={[2, 3, 4]} intensity={1.2} />
       <directionalLight position={[-3, 1, 2]} intensity={0.4} />
       <Suspense fallback={primitive}>
         {useGlb ? (
