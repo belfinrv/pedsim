@@ -126,6 +126,7 @@ const DEFAULT_CHILD_DIALOGUE: Required<ChildDialogue> = {
     "*glances at Mom, looking confused* ...I don't know what that word means.",
   fillerOpen: "Okay. *nods*",
   fillerGuarded: "*looks down* ...um.",
+  facts: {},
 }
 
 // Parent lines carry no speaker prefix — the UI labels them from parent.label.
@@ -147,6 +148,13 @@ function factLine(
   disclosing: boolean,
   D: Required<ChildDialogue>,
 ): string {
+  // Per-fact override (scenarios with several distinct active conditions).
+  const per = D.facts?.[fact.id]
+  if (per) {
+    return disclosing
+      ? (per.open ?? per.guarded ?? "...")
+      : (per.guarded ?? per.open ?? "...")
+  }
   if (fact.category === "condition" && /\(active\)/.test(fact.fact)) {
     return disclosing ? D.chiefOpen : D.chiefGuarded
   }

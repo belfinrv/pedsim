@@ -40,6 +40,24 @@ const SYMPTOM_WORDS = [
   "whats wrong",
   "bothering you",
   "symptom",
+  // mood / mental-health probes count as symptom-history questions too
+  "worried",
+  "worry",
+  "anxious",
+  "nervous",
+  "scared",
+  "sad",
+  "down",
+  "mood",
+  "stress",
+  "stressed",
+  "lonely",
+  "upset",
+  "school",
+  "home",
+  "friends",
+  "happy",
+  "how are things",
 ]
 
 const MED_WORDS = [
@@ -94,10 +112,13 @@ export function classifyQuestion(raw: string): QuestionIntent[] {
   return intents
 }
 
-// A fact readily disclosed regardless of rapport: the active chief complaint
-// (that's why the family came in). Everything else — resolved episodes, meds,
-// allergies — is "sensitive/detailed" and needs rapport above threshold.
+// A fact readily disclosed regardless of rapport: by default the active chief
+// complaint (that's why the family came in). Everything else — resolved
+// episodes, meds, allergies — is "sensitive/detailed" and needs rapport above
+// threshold. A scenario can override per fact (readily_disclosed) — e.g. a
+// mental-health concern stays hidden even though it's active.
 export function isReadilyDisclosed(fact: KeyFact): boolean {
+  if (typeof fact.readily_disclosed === "boolean") return fact.readily_disclosed
   return fact.category === "condition" && / \(active\)$/.test(fact.fact)
 }
 

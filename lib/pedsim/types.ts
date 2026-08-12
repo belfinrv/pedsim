@@ -54,6 +54,10 @@ export interface KeyFact {
   fact: string
   domain_relevant: boolean
   elicit_via: string
+  // Overrides the default "active condition = readily disclosed" heuristic.
+  // Set false for sensitive facts (e.g. mental-health concerns) that the child
+  // should withhold until rapport clears the disclosure threshold.
+  readily_disclosed?: boolean
 }
 
 export interface AnswerKey {
@@ -93,6 +97,10 @@ export interface ChildDialogue {
   jargonConfused?: string
   fillerOpen?: string
   fillerGuarded?: string
+  // Per-fact lines keyed by KeyFact id — for scenarios with several distinct
+  // active conditions (e.g. behavioral: anxiety vs low mood vs somatic pain).
+  // Falls back to the category lines above when a fact isn't listed here.
+  facts?: Record<string, { open?: string; guarded?: string }>
 }
 
 // Parent interjections, keyed by situation; empty string suppresses a branch.

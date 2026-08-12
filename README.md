@@ -52,11 +52,18 @@ in-character lines and its parent's interjections, so any domain/temperament
 voices correctly without touching engine code. Three scenarios ship, spanning
 every temperament and parent style:
 
-| Scenario | Domain | Child temperament | Parent |
-|----------|--------|-------------------|--------|
-| Ed Rempel, 7 | Respiratory (bronchitis) | Shy | Anxious mom |
-| Mia Torres, 9 | ENT (otitis media) | Defiant | Dismissive mom |
-| Leo Nguyen, 8 | Allergy (peanut + pollen) | Chatty | Pushy dad |
+| Scenario | Domain / EPA | Child temperament | Parent |
+|----------|--------------|-------------------|--------|
+| Ed Rempel, 7 | Respiratory (bronchitis) · EPA 2 | Shy | Anxious mom |
+| Mia Torres, 9 | ENT (otitis media) · EPA 2 | Defiant | Dismissive mom |
+| Leo Nguyen, 8 | Allergy (peanut + pollen) · EPA 2 | Chatty | Pushy dad |
+| Marcus Johnson, 12 | Behavioral / mental health · **EPA 3** | Guarded | Supportive mom |
+
+The behavioral case shows the disclosure mechanic at its sharpest: Marcus
+readily offers a **somatic complaint** (stomachaches), but his **anxiety and low
+mood stay hidden** until the doctor earns a safe space — a blunt "are you
+anxious or sad?" just gets deflected. That's driven by per-fact
+`readily_disclosed` flags and per-fact dialogue in the scenario package.
 
 Each is a full package — age-coherent chart, answer key, persona with dialogue,
 avatar. The Scenario Builder picks the matching patient for the chosen domain.
