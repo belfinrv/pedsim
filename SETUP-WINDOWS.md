@@ -59,6 +59,21 @@ deterministic on the server either way.
 
 `.env.local` is git-ignored, so your key is never committed.
 
+## 5b. (Optional) HD child voice via edge-tts
+
+For a much more child-like voice than the built-in Windows voices, enable
+edge-tts (free neural TTS). In the **same conda/PowerShell environment** you run
+the dev server from:
+
+```powershell
+pip install edge-tts
+```
+
+Then start the app (`npm run dev`), open the **Encounter**, click the **⚙** on
+the avatar, and tick **HD child voice (edge-tts)**. Use **Test voice** to hear
+it. If it's not installed or you're offline, PedSim just uses the browser voice
+— nothing breaks.
+
 ## 6. Later: get updates
 
 ```powershell

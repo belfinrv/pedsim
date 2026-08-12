@@ -124,6 +124,64 @@ export function cancelSpeech() {
   if (speechSupported()) window.speechSynthesis.cancel()
 }
 
+// HD voice via the /api/tts (edge-tts) route. Streams MP3 and plays it; on any
+// failure (edge-tts not installed, offline, Cloudflare) falls back to the
+// browser Web Speech voice so the encounter always speaks.
+let hdAudio: HTMLAudioElement | null = null
+
+export async function speakHd(
+  text: string,
+  role: VoiceRole,
+  opts: SpeakOpts = {},
+): Promise<SpeakHandle> {
+  const cleaned = stripForSpeech(text)
+  if (opts.enabled === false || !cleaned) {
+    opts.onStart?.()
+    const ms = Math.min(6000, 400 + cleaned.length * 45)
+    const t = setTimeout(() => opts.onEnd?.(), ms)
+    return { cancel: () => clearTimeout(t) }
+  }
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: cleaned, role }),
+    })
+    if (!res.ok) throw new Error(`tts ${res.status}`)
+    const buf = await res.arrayBuffer()
+    const url = URL.createObjectURL(new Blob([buf], { type: "audio/mpeg" }))
+    if (hdAudio) hdAudio.pause()
+    const audio = new Audio(url)
+    hdAudio = audio
+    const done = () => {
+      URL.revokeObjectURL(url)
+      opts.onEnd?.()
+    }
+    audio.onended = done
+    audio.onerror = done
+    opts.onStart?.()
+    await audio.play()
+    return {
+      cancel: () => {
+        audio.onended = null
+        audio.pause()
+        URL.revokeObjectURL(url)
+      },
+    }
+  } catch {
+    // Fall back to the browser voice.
+    return speak(text, role, { ...opts, onStart: opts.onStart })
+  }
+}
+
+export function cancelHd() {
+  if (hdAudio) {
+    hdAudio.onended = null
+    hdAudio.pause()
+    hdAudio = null
+  }
+}
+
 // For the settings voice picker: English voices, name + lang.
 export async function listVoices(): Promise<
   { name: string; lang: string }[]

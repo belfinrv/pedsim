@@ -20,7 +20,9 @@ import {
   listenOnce,
   recognitionSupported,
   speak,
+  speakHd,
   cancelSpeech,
+  cancelHd,
   type SpeakHandle,
 } from "@/lib/pedsim/speech"
 import { useAvatarSettings } from "@/lib/pedsim/avatar-settings"
@@ -108,11 +110,13 @@ export default function EncounterPage() {
   // Speak the child's reply, then the parent's (if any), animating the avatar.
   const speakReply = (childText: string, parentText: string | null) => {
     cancelSpeech()
+    cancelHd()
+    const say = settings.hdVoice ? speakHd : speak
     const runChild = async () => {
       setActiveSpeaker("child")
       setSpeaking(true)
       setCaption(childText)
-      speakHandle.current = await speak(childText, "child", {
+      speakHandle.current = await say(childText, "child", {
         enabled: voiceOn,
         pitch: settings.childPitch,
         rate: settings.childRate,
@@ -130,7 +134,7 @@ export default function EncounterPage() {
       setActiveSpeaker("parent")
       setSpeaking(true)
       setCaption(parentText as string)
-      speakHandle.current = await speak(parentText as string, "parent", {
+      speakHandle.current = await say(parentText as string, "parent", {
         enabled: voiceOn,
         onEnd: () => {
           setSpeaking(false)
@@ -142,7 +146,13 @@ export default function EncounterPage() {
   }
 
   // Stop any speech when leaving the screen.
-  useEffect(() => () => cancelSpeech(), [])
+  useEffect(
+    () => () => {
+      cancelSpeech()
+      cancelHd()
+    },
+    [],
+  )
 
   // Begin encounter + seed the scene-setting line once.
   useEffect(() => {
@@ -231,13 +241,17 @@ export default function EncounterPage() {
 
   const finish = () => {
     cancelSpeech()
+    cancelHd()
     endEncounter()
     router.push("/report")
   }
 
   const toggleVoice = () => {
     setVoiceOn((v) => {
-      if (v) cancelSpeech()
+      if (v) {
+        cancelSpeech()
+        cancelHd()
+      }
       return !v
     })
   }

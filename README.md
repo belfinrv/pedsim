@@ -66,8 +66,8 @@ asked; historical facts require an explicit "has this happened before?" probe.
 The encounter renders a **3D child avatar** (Three.js / React Three Fiber) that
 **lip-syncs and speaks each reply aloud**, with idle blinking and head motion —
 the ARCHITECTURE.md §2.6 vision. Voice uses the browser's built-in Web Speech
-API, so it works with **no keys and no cost** (edge-tts / Inworld are the
-production upgrades). Extras:
+API by default, so it works with **no keys and no cost**, and can upgrade to a
+**neural edge-tts child voice** (see below). Extras:
 
 - **Voice on/off** toggle and a **live caption** under the face.
 - **Mic dictation** for the doctor (🎤) via the browser SpeechRecognition API,
@@ -92,6 +92,24 @@ the persona), copy its `.glb` URL, and add the `morphTargets=ARKit,Oculus
 Visemes` query so the visemes drive the mouth. If the model fails to load, the
 app automatically falls back to the stylized head. Requires WebGL (any modern
 browser).
+
+### HD child voice (edge-tts)
+
+The browser voice is serviceable, but for a genuinely child-like voice enable
+**edge-tts** — Microsoft's free neural TTS (`en-US-AnaNeural`, the child voice
+named in ARCHITECTURE.md §2.6). It runs locally via a small server route
+(`/api/tts`) and needs the Python CLI installed once:
+
+```bash
+pip install edge-tts        # in the same environment you run the dev server from
+```
+
+Then in the encounter's **⚙ settings**, tick **HD child voice (edge-tts)**.
+Replies are synthesized server-side and streamed as MP3. If edge-tts isn't
+installed (or you're offline, or on Cloudflare Workers where subprocesses
+aren't available), the app silently falls back to the browser voice — so it's a
+pure upgrade with no hard dependency. Override the command with
+`PEDSIM_EDGE_TTS_CMD` if `edge-tts` isn't on your PATH.
 
 ## Scoring
 

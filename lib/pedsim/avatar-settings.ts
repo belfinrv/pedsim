@@ -7,9 +7,10 @@ import { useCallback, useEffect, useState } from "react"
 
 export interface AvatarSettings {
   avatarUrl: string // "" = built-in stylized head
-  childPitch: number // 0.5 – 2
-  childRate: number // 0.5 – 1.5
-  childVoice: string // voice name, "" = auto-pick
+  childPitch: number // 0.5 – 2   (browser voice only)
+  childRate: number // 0.5 – 1.5  (browser voice only)
+  childVoice: string // voice name, "" = auto-pick (browser voice only)
+  hdVoice: boolean // use edge-tts (/api/tts) neural child voice
 }
 
 export const DEFAULT_SETTINGS: AvatarSettings = {
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: AvatarSettings = {
   childPitch: 1.9,
   childRate: 0.9,
   childVoice: "",
+  hdVoice: false,
 }
 
 const KEY = "pedsim.avatar.settings.v1"

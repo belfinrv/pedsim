@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { RotateCcw, Volume2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { listVoices, speak, cancelSpeech } from "@/lib/pedsim/speech"
+import { listVoices, speak, speakHd, cancelSpeech } from "@/lib/pedsim/speech"
 import type { AvatarSettings } from "@/lib/pedsim/avatar-settings"
 
 export function AvatarSettingsPanel({
@@ -30,12 +30,17 @@ export function AvatarSettingsPanel({
 
   const testVoice = () => {
     cancelSpeech()
-    speak(`Hi! I'm ${childName}. Is this how I sound?`, "child", {
-      enabled: true,
-      pitch: settings.childPitch,
-      rate: settings.childRate,
-      voiceName: settings.childVoice,
-    })
+    const line = `Hi! I'm ${childName}. Is this how I sound?`
+    if (settings.hdVoice) {
+      speakHd(line, "child", { enabled: true })
+    } else {
+      speak(line, "child", {
+        enabled: true,
+        pitch: settings.childPitch,
+        rate: settings.childRate,
+        voiceName: settings.childVoice,
+      })
+    }
   }
 
   return (
@@ -87,8 +92,27 @@ export function AvatarSettingsPanel({
           </p>
         </div>
 
-        {/* Voice picker */}
-        <div className="space-y-1.5">
+        {/* HD voice toggle */}
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-2">
+          <input
+            type="checkbox"
+            checked={settings.hdVoice}
+            onChange={(e) => onUpdate({ hdVoice: e.target.checked })}
+            className="mt-0.5 accent-primary"
+          />
+          <span className="text-xs">
+            <span className="font-medium">HD child voice (edge-tts)</span>
+            <span className="block text-[10px] leading-tight text-muted-foreground">
+              Neural voice (en-US-AnaNeural). Needs <code>pip install edge-tts</code>{" "}
+              + internet; falls back to the browser voice otherwise.
+            </span>
+          </span>
+        </label>
+
+        {/* Voice picker (browser voice) */}
+        <div
+          className={`space-y-1.5 ${settings.hdVoice ? "pointer-events-none opacity-40" : ""}`}
+        >
           <Label className="text-xs">Child voice</Label>
           <select
             value={settings.childVoice}
@@ -104,24 +128,28 @@ export function AvatarSettingsPanel({
           </select>
         </div>
 
-        {/* Pitch */}
-        <Slider
-          label="Pitch (higher = younger)"
-          min={0.5}
-          max={2}
-          step={0.1}
-          value={settings.childPitch}
-          onChange={(v) => onUpdate({ childPitch: v })}
-        />
-        {/* Rate */}
-        <Slider
-          label="Rate (lower = slower)"
-          min={0.5}
-          max={1.5}
-          step={0.05}
-          value={settings.childRate}
-          onChange={(v) => onUpdate({ childRate: v })}
-        />
+        <div
+          className={`space-y-4 ${settings.hdVoice ? "pointer-events-none opacity-40" : ""}`}
+        >
+          {/* Pitch */}
+          <Slider
+            label="Pitch (higher = younger)"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={settings.childPitch}
+            onChange={(v) => onUpdate({ childPitch: v })}
+          />
+          {/* Rate */}
+          <Slider
+            label="Rate (lower = slower)"
+            min={0.5}
+            max={1.5}
+            step={0.05}
+            value={settings.childRate}
+            onChange={(v) => onUpdate({ childRate: v })}
+          />
+        </div>
 
         <div className="flex gap-2 pt-1">
           <Button size="sm" className="h-8 flex-1 text-xs" onClick={testVoice}>
