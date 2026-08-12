@@ -84,6 +84,9 @@ pnpm install
 pnpm dev          # http://localhost:3000
 ```
 
+On Windows, see **[SETUP-WINDOWS.md](./SETUP-WINDOWS.md)** for a step-by-step
+clone-and-run guide (including OneDrive and PowerShell gotchas).
+
 Everything runs on the deterministic rule engine out of the box. To use a real
 LLM for the child's replies and the grading rubric, set:
 
