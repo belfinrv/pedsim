@@ -107,8 +107,11 @@ API by default, so it works with **no keys and no cost**, and can upgrade to a
   `localStorage`, no file editing needed.
 
 By default it shows a lightweight **stylized head** (self-contained, always
-works offline). For a **photorealistic avatar**, point it at a Ready Player Me
-model:
+works offline) that **varies per patient** — skin tone and hair by the avatar
+descriptor's race, hair length by sex, and facial proportions by age (rounder
+baby-schema for younger, longer face for adolescents) — so Ed, Mia, Leo, and
+Marcus each look like distinct kids. For a **photorealistic avatar**, point it
+at a Ready Player Me model:
 
 ```bash
 # .env.local  (or a Cloudflare/Workers var)

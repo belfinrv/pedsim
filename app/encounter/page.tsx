@@ -332,6 +332,11 @@ export default function EncounterPage() {
             speaker={activeSpeaker}
             mood={rapport}
             avatarUrl={avatarUrl}
+            avatar={{
+              age_bracket: scenario.avatar.age_bracket,
+              sex: scenario.avatar.sex,
+              race: scenario.avatar.race,
+            }}
           />
           {/* speaker chip */}
           {activeSpeaker && (

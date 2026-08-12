@@ -17,6 +17,12 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF } from "@react-three/drei"
 import * as THREE from "three"
 
+export interface AvatarDescriptorLite {
+  age_bracket?: string // young_child | older_child | adolescent
+  sex?: string // male | female
+  race?: string
+}
+
 export interface AvatarStageProps {
   speaking: boolean
   speaker: "child" | "parent" | null
@@ -24,6 +30,47 @@ export interface AvatarStageProps {
   mood?: number
   /** Optional Ready Player Me (or any morph-target) GLB URL. */
   avatarUrl?: string | null
+  /** Drives the stylized head's look (skin, hair, proportions). */
+  avatar?: AvatarDescriptorLite
+}
+
+// Per-patient look for the stylized head: skin & hair tone by race, facial
+// proportions by age (baby-schema → longer adolescent face), hair by sex.
+interface HeadTraits {
+  skin: string
+  hair: string
+  headScale: [number, number, number]
+  eyeR: number
+  eyeY: number
+  browY: number
+  cheekBase: number
+  cheekSize: number
+  longHair: boolean
+}
+
+function traitsFor(a?: AvatarDescriptorLite): HeadTraits {
+  const race = (a?.race || "").toLowerCase()
+  const skin = /black|african/.test(race)
+    ? "#6f4a37"
+    : /asian/.test(race)
+      ? "#ecbc8b"
+      : /white|caucasian/.test(race)
+        ? "#f2c9a8"
+        : "#d9a982"
+  const hair = /black|african/.test(race)
+    ? "#140f0b"
+    : /asian/.test(race)
+      ? "#241812"
+      : /white|caucasian/.test(race)
+        ? "#6b4326"
+        : "#3a271a"
+  const longHair = (a?.sex || "").toLowerCase().startsWith("f")
+  const bracket = a?.age_bracket || "young_child"
+  if (bracket === "adolescent")
+    return { skin, hair, headScale: [0.99, 1.1, 0.99], eyeR: 0.19, eyeY: 0.08, browY: 0.46, cheekBase: 0.12, cheekSize: 0.17, longHair }
+  if (bracket === "older_child")
+    return { skin, hair, headScale: [1.03, 1.05, 1.0], eyeR: 0.21, eyeY: 0.05, browY: 0.42, cheekBase: 0.2, cheekSize: 0.2, longHair }
+  return { skin, hair, headScale: [1.06, 1.02, 1.0], eyeR: 0.24, eyeY: 0.02, browY: 0.4, cheekBase: 0.28, cheekSize: 0.24, longHair }
 }
 
 // A little shared clock helper: while `speaking`, produce a lively mouth-open
@@ -66,16 +113,16 @@ function useBlink() {
 function PrimitiveHead({
   speaking,
   mood = 20,
-  speaker,
+  traits,
 }: {
   speaking: boolean
   mood?: number
-  speaker: "child" | "parent" | null
+  traits: HeadTraits
 }) {
   const group = useRef<THREE.Group>(null)
   const mouthRef = useRef<THREE.Mesh>(null)
   const eyeL = useRef<THREE.Group>(null)
-  const eyeR = useRef<THREE.Group>(null)
+  const eyeRRef = useRef<THREE.Group>(null)
   const mouth = useMouth(speaking)
   const blink = useBlink()
   const smile = Math.min(1, Math.max(0, (mood - 30) / 60))
@@ -96,24 +143,32 @@ function PrimitiveHead({
     // Cartoon blink: squash the whole eye vertically for a moment.
     const eyeScale = 1 - blink.current * 0.85
     if (eyeL.current) eyeL.current.scale.y = eyeScale
-    if (eyeR.current) eyeR.current.scale.y = eyeScale
+    if (eyeRRef.current) eyeRRef.current.scale.y = eyeScale
   })
 
-  const skin = "#f2c9a8"
-  const hair = speaker === "parent" ? "#5b3a29" : "#7b4a2d"
+  const { skin, hair, headScale, eyeR, eyeY, browY, cheekBase, cheekSize, longHair } =
+    traits
 
   return (
     <group ref={group} position={[0, 0.32, 0]}>
-      {/* head — rounder & slightly wider for a child's proportions */}
-      <mesh castShadow scale={[1.06, 1.02, 1.0]}>
+      {/* head */}
+      <mesh castShadow scale={headScale}>
         <sphereGeometry args={[1, 48, 48]} />
         <meshStandardMaterial color={skin} roughness={0.85} />
       </mesh>
-      {/* hair cap (higher, kid-like fringe) */}
-      <mesh position={[0, 0.48, -0.03]} scale={[1.1, 0.78, 1.08]}>
+      {/* hair cap */}
+      <mesh position={[0, 0.48, -0.03]} scale={[1.1, longHair ? 0.85 : 0.78, 1.08]}>
         <sphereGeometry args={[1, 40, 40, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
         <meshStandardMaterial color={hair} roughness={0.9} />
       </mesh>
+      {/* longer hair framing the face (female) */}
+      {longHair &&
+        [-1, 1].map((x, i) => (
+          <mesh key={i} position={[x * 0.92, -0.35, -0.1]} scale={[0.42, 1.0, 0.5]}>
+            <sphereGeometry args={[0.6, 20, 24]} />
+            <meshStandardMaterial color={hair} roughness={0.9} />
+          </mesh>
+        ))}
       {/* ears */}
       <mesh position={[-1, -0.02, 0]}>
         <sphereGeometry args={[0.18, 16, 16]} />
@@ -123,30 +178,30 @@ function PrimitiveHead({
         <sphereGeometry args={[0.18, 16, 16]} />
         <meshStandardMaterial color={skin} roughness={0.8} />
       </mesh>
-      {/* eyes — big and set lower (baby-schema reads as young) */}
+      {/* eyes */}
       {[-0.33, 0.33].map((x, i) => (
-        <group key={i} ref={i === 0 ? eyeL : eyeR} position={[x, 0.02, 0.82]}>
+        <group key={i} ref={i === 0 ? eyeL : eyeRRef} position={[x, eyeY, 0.82]}>
           <mesh>
-            <sphereGeometry args={[0.24, 28, 28]} />
+            <sphereGeometry args={[eyeR, 28, 28]} />
             <meshStandardMaterial color="#ffffff" roughness={0.25} />
           </mesh>
-          <mesh position={[0, -0.02, 0.17]}>
-            <sphereGeometry args={[0.13, 22, 22]} />
-            <meshStandardMaterial color="#5a4433" roughness={0.15} />
+          <mesh position={[0, -0.02, eyeR * 0.7]}>
+            <sphereGeometry args={[eyeR * 0.54, 22, 22]} />
+            <meshStandardMaterial color="#4a3527" roughness={0.15} />
           </mesh>
-          <mesh position={[0, -0.02, 0.27]}>
-            <sphereGeometry args={[0.06, 18, 18]} />
+          <mesh position={[0, -0.02, eyeR * 1.12]}>
+            <sphereGeometry args={[eyeR * 0.25, 18, 18]} />
             <meshStandardMaterial color="#20160f" roughness={0.1} />
           </mesh>
-          <mesh position={[0.05, 0.05, 0.3]}>
-            <sphereGeometry args={[0.035, 12, 12]} />
+          <mesh position={[eyeR * 0.2, eyeR * 0.2, eyeR * 1.25]}>
+            <sphereGeometry args={[eyeR * 0.15, 12, 12]} />
             <meshStandardMaterial color="#ffffff" roughness={0.05} />
           </mesh>
         </group>
       ))}
-      {/* eyebrows — thin, high, soft */}
+      {/* eyebrows */}
       {[-0.33, 0.33].map((x, i) => (
-        <mesh key={i} position={[x, 0.4, 0.9]} rotation={[0, 0, x < 0 ? 0.04 : -0.04]}>
+        <mesh key={i} position={[x, browY, 0.9]} rotation={[0, 0, x < 0 ? 0.04 : -0.04]}>
           <boxGeometry args={[0.24, 0.035, 0.05]} />
           <meshStandardMaterial color={hair} roughness={0.9} />
         </mesh>
@@ -159,16 +214,16 @@ function PrimitiveHead({
       {/* mouth (lip-syncs) */}
       <mesh ref={mouthRef} position={[0, -0.46, 0.88]}>
         <sphereGeometry args={[0.3, 24, 16]} />
-        <meshStandardMaterial color="#c05a52" roughness={0.5} />
+        <meshStandardMaterial color="#b0524b" roughness={0.5} />
       </mesh>
-      {/* chubby cheeks — always a little rosy, warmer with rapport */}
+      {/* cheeks — rosy, warmer with rapport */}
       {[-0.52, 0.52].map((x, i) => (
         <mesh key={i} position={[x, -0.24, 0.76]}>
-          <sphereGeometry args={[0.24, 20, 20]} />
+          <sphereGeometry args={[cheekSize, 20, 20]} />
           <meshStandardMaterial
-            color="#f2a891"
+            color="#e8927a"
             transparent
-            opacity={0.28 + smile * 0.4}
+            opacity={cheekBase + smile * 0.4}
             roughness={0.9}
           />
         </mesh>
@@ -252,13 +307,14 @@ class AvatarBoundary extends Component<
 
 export default function AvatarStage({
   speaking,
-  speaker,
   mood = 20,
   avatarUrl,
+  avatar,
 }: AvatarStageProps) {
   const useGlb = Boolean(avatarUrl && /^https?:\/\//.test(avatarUrl))
+  const traits = traitsFor(avatar)
   const primitive = (
-    <PrimitiveHead speaking={speaking} mood={mood} speaker={speaker} />
+    <PrimitiveHead speaking={speaking} mood={mood} traits={traits} />
   )
 
   return (
