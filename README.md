@@ -27,7 +27,7 @@ downstream as **PLANNED**. This project implements the planned components:
 | §5 Screen 2 Encounter UI | PLANNED | ✅ `app/encounter` (chat, rapport meter, live fact tracker) |
 | §5 Screen 3 Score Report | PLANNED | ✅ `app/report` |
 | §2.1 Synthea patient generation | BUILT (Java CLI) | Unchanged — runs offline; a seed scenario is bundled |
-| §2.6 Avatar layer (voice + GLB) | PLANNED | Descriptor only (`avatar.json`); rendering out of prototype scope |
+| §2.6 Avatar layer (voice + GLB) | PLANNED | ✅ 3D talking avatar in the encounter — lip-sync, blink, idle motion, spoken voice + mic input (`components/avatar/`, `lib/pedsim/speech.ts`); Ready Player Me GLB supported, stylized head fallback |
 
 The design principles from §4 are honored: **rapport and fact-tracking are
 computed deterministically** (never delegated to the model), so every score is
@@ -60,6 +60,35 @@ sensitive/historical facts (prior episodes, medications). Above it, they open
 up and those facts become elicitable — good communication *mechanically* yields
 a better history. The active chief complaint is always minimally disclosed when
 asked; historical facts require an explicit "has this happened before?" probe.
+
+## The 3D talking avatar
+
+The encounter renders a **3D child avatar** (Three.js / React Three Fiber) that
+**lip-syncs and speaks each reply aloud**, with idle blinking and head motion —
+the ARCHITECTURE.md §2.6 vision. Voice uses the browser's built-in Web Speech
+API, so it works with **no keys and no cost** (edge-tts / Inworld are the
+production upgrades). Extras:
+
+- **Voice on/off** toggle and a **live caption** under the face.
+- **Mic dictation** for the doctor (🎤) via the browser SpeechRecognition API,
+  where supported (Chrome/Edge).
+- Child and parent lines use distinct voices; stage directions in *asterisks*
+  are stripped before speaking.
+
+By default it shows a lightweight **stylized head** (self-contained, always
+works offline). For a **photorealistic avatar**, point it at a Ready Player Me
+model:
+
+```bash
+# .env.local  (or a Cloudflare/Workers var)
+NEXT_PUBLIC_PEDSIM_AVATAR_URL=https://models.readyplayer.me/<id>.glb?morphTargets=ARKit,Oculus%20Visemes
+```
+
+Create one free at **readyplayer.me** (pick a child-appropriate look to match
+the persona), copy its `.glb` URL, and add the `morphTargets=ARKit,Oculus
+Visemes` query so the visemes drive the mouth. If the model fails to load, the
+app automatically falls back to the stylized head. Requires WebGL (any modern
+browser).
 
 ## Scoring
 

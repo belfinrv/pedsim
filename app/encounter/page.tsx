@@ -2,12 +2,42 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { nanoid } from "nanoid"
-import { CornerDownLeft, RotateCcw, Sparkles } from "lucide-react"
+import {
+  CornerDownLeft,
+  Mic,
+  RotateCcw,
+  Sparkles,
+  Volume2,
+  VolumeX,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePedSim } from "@/components/provider"
+import {
+  listenOnce,
+  recognitionSupported,
+  speak,
+  cancelSpeech,
+  type SpeakHandle,
+} from "@/lib/pedsim/speech"
 import type { TranscriptTurn } from "@/lib/pedsim/types"
+
+// The 3D avatar is client-only (WebGL) — load it without SSR.
+const AvatarStage = dynamic(() => import("@/components/avatar/avatar-stage"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-full place-items-center text-xs text-muted-foreground">
+      Loading avatar…
+    </div>
+  ),
+})
+
+// Optional realistic avatar: set NEXT_PUBLIC_PEDSIM_AVATAR_URL to a Ready
+// Player Me .glb (with ARKit + Oculus viseme morph targets). Falls back to the
+// built-in stylized head when unset.
+const AVATAR_URL = process.env.NEXT_PUBLIC_PEDSIM_AVATAR_URL || null
 
 const SUGGESTIONS = [
   "Hi there, I'm Dr. Lee. It's really nice to meet you.",
@@ -49,11 +79,60 @@ export default function EncounterPage() {
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<string | null>(null)
   const [engineLabel, setEngineLabel] = useState<"llm" | "heuristic" | null>(null)
+  const [voiceOn, setVoiceOn] = useState(true)
+  const [speaking, setSpeaking] = useState(false)
+  const [activeSpeaker, setActiveSpeaker] = useState<"child" | "parent" | null>(
+    null,
+  )
+  const [caption, setCaption] = useState<string>("")
+  const [listening, setListening] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const speakHandle = useRef<SpeakHandle | null>(null)
 
   const persona = scenario.persona
   const threshold = persona.rapport.disclosure_threshold
   const domainFacts = scenario.answer_key.key_facts.filter((f) => f.domain_relevant)
+  const avatarUrl =
+    AVATAR_URL ||
+    (/^https?:\/\//.test(scenario.avatar.model_url)
+      ? scenario.avatar.model_url
+      : null)
+
+  // Speak the child's reply, then the parent's (if any), animating the avatar.
+  const speakReply = (childText: string, parentText: string | null) => {
+    cancelSpeech()
+    const runChild = async () => {
+      setActiveSpeaker("child")
+      setSpeaking(true)
+      setCaption(childText)
+      speakHandle.current = await speak(childText, "child", {
+        enabled: voiceOn,
+        onEnd: () => {
+          if (parentText) runParent()
+          else {
+            setSpeaking(false)
+            setActiveSpeaker(null)
+          }
+        },
+      })
+    }
+    const runParent = async () => {
+      setActiveSpeaker("parent")
+      setSpeaking(true)
+      setCaption(parentText as string)
+      speakHandle.current = await speak(parentText as string, "parent", {
+        enabled: voiceOn,
+        onEnd: () => {
+          setSpeaking(false)
+          setActiveSpeaker(null)
+        },
+      })
+    }
+    runChild()
+  }
+
+  // Stop any speech when leaving the screen.
+  useEffect(() => () => cancelSpeech(), [])
 
   // Begin encounter + seed the scene-setting line once.
   useEffect(() => {
@@ -124,6 +203,7 @@ export default function EncounterPage() {
         factsSurfaced: r.factsSurfaced,
         parentOnlyStreak: r.parentOnlyStreak,
       })
+      speakReply(r.childText, r.parentText)
     } catch {
       appendTurns([
         {
@@ -140,17 +220,76 @@ export default function EncounterPage() {
   }
 
   const finish = () => {
+    cancelSpeech()
     endEncounter()
     router.push("/report")
   }
 
+  const toggleVoice = () => {
+    setVoiceOn((v) => {
+      if (v) cancelSpeech()
+      return !v
+    })
+  }
+
+  const startListening = () => {
+    if (listening) return
+    const handle = listenOnce(
+      (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
+      () => setListening(false),
+    )
+    if (handle) setListening(true)
+  }
+
   const disclosing = rapport >= threshold
   const doctorTurns = transcript.filter((t) => t.speaker === "doctor").length
+  const micOk = recognitionSupported()
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
       {/* Chat column */}
       <div className="flex h-[calc(100vh-160px)] min-h-[520px] flex-col rounded-xl border border-border bg-card">
+        {/* 3D avatar stage */}
+        <div className="relative h-[280px] shrink-0 overflow-hidden rounded-t-xl border-b border-border bg-[#eef2f8]">
+          <AvatarStage
+            speaking={speaking}
+            speaker={activeSpeaker}
+            mood={rapport}
+            avatarUrl={avatarUrl}
+          />
+          {/* speaker chip */}
+          {activeSpeaker && (
+            <div className="absolute left-3 top-3 rounded-full bg-background/85 px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur">
+              {activeSpeaker === "child" ? persona.child.name : "Mom"}{" "}
+              {speaking && <span className="animate-pulse">🔊</span>}
+            </div>
+          )}
+          {/* voice controls */}
+          <div className="absolute right-3 top-3 flex gap-1.5">
+            <button
+              onClick={toggleVoice}
+              title={voiceOn ? "Mute voice" : "Unmute voice"}
+              className="grid size-8 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background"
+            >
+              {voiceOn ? (
+                <Volume2 className="size-4" />
+              ) : (
+                <VolumeX className="size-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* live caption (kept clear of the face) */}
+        {caption && (
+          <div className="shrink-0 border-b border-border bg-secondary/40 px-4 py-2 text-center text-sm">
+            <span className="font-medium text-muted-foreground">
+              {activeSpeaker === "parent" ? "Mom: " : `${persona.child.name}: `}
+            </span>
+            {caption.replace(/^\s*mom\s*:\s*/i, "")}
+          </div>
+        )}
+
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
             <p className="text-sm font-semibold">
@@ -240,6 +379,18 @@ export default function EncounterPage() {
             placeholder="Speak to the child (or their parent)…"
             className="max-h-32 min-h-10 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
+          {micOk && (
+            <Button
+              type="button"
+              size="icon-lg"
+              variant={listening ? "default" : "outline"}
+              onClick={startListening}
+              title="Dictate (speech-to-text)"
+              className={listening ? "animate-pulse" : ""}
+            >
+              <Mic className="size-4" />
+            </Button>
+          )}
           <Button type="submit" size="icon-lg" disabled={sending || !input.trim()}>
             <CornerDownLeft className="size-4" />
           </Button>
