@@ -68,6 +68,41 @@ export interface RapportRule {
   text: string
 }
 
+// In-character lines the deterministic engine voices for this specific child.
+// Making these data-driven lets any domain/temperament sound right without
+// touching engine code. All optional — a respiratory-shy default fills gaps.
+export interface ChildDialogue {
+  greetingOpen?: string
+  greetingGuarded?: string
+  interestsOpen?: string
+  interestsGuarded?: string
+  feelingsAck?: string
+  chiefOpen?: string // active condition, disclosing
+  chiefGuarded?: string // active condition, minimal
+  priorEpisode?: string // resolved condition
+  medication?: string // medication fact
+  allergyFact?: string // allergy fact
+  noAllergy?: string // asked about allergies, none on file
+  genericSymptomOpen?: string
+  genericSymptomGuarded?: string
+  medicationUnknownGuarded?: string
+  counselingOpen?: string
+  counselingGuarded?: string
+  withhold?: string // sensitive fact, below threshold
+  withdrawn?: string // clammed up (doctor talked past them)
+  jargonConfused?: string
+  fillerOpen?: string
+  fillerGuarded?: string
+}
+
+// Parent interjections, keyed by situation; empty string suppresses a branch.
+export interface ParentDialogue {
+  reassured?: string // doctor offered reassurance
+  withdrawn?: string // child clammed up
+  medication?: string // medication question
+  symptom?: string // symptom / prior-history question
+}
+
 export interface Persona {
   child: {
     name: string
@@ -86,8 +121,11 @@ export interface Persona {
     present: boolean
     style: ParentStyle
     behavior: string | null
+    label?: string // "Mom" | "Dad" | "Grandma" … how the UI names the parent
+    dialogue?: ParentDialogue
   }
   hard_rules: string[]
+  dialogue?: ChildDialogue
 }
 
 export interface AvatarDescriptor {

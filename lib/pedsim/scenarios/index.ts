@@ -3,8 +3,14 @@
 
 import type { ContentDomain, ScenarioPackage } from "../types"
 import { respiratory0406b500 } from "./respiratory-0406b500"
+import { ent7b21c4a9 } from "./ent-7b21c4a9"
+import { allergy3c9f0d21 } from "./allergy-3c9f0d21"
 
-export const SCENARIOS: ScenarioPackage[] = [respiratory0406b500]
+export const SCENARIOS: ScenarioPackage[] = [
+  respiratory0406b500,
+  ent7b21c4a9,
+  allergy3c9f0d21,
+]
 
 export function getScenario(id: string): ScenarioPackage | undefined {
   return SCENARIOS.find((s) => s.manifest.scenario_id === id)

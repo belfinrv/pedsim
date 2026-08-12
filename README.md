@@ -45,6 +45,24 @@ Screen 2  /encounter  Chat with the child; rapport gates disclosure;
 Screen 3  /report     Mechanical scores + rubric (4 domains) + evidence
 ```
 
+## Scenario bank
+
+The deterministic engine is **data-driven** — each scenario supplies its child's
+in-character lines and its parent's interjections, so any domain/temperament
+voices correctly without touching engine code. Three scenarios ship, spanning
+every temperament and parent style:
+
+| Scenario | Domain | Child temperament | Parent |
+|----------|--------|-------------------|--------|
+| Ed Rempel, 7 | Respiratory (bronchitis) | Shy | Anxious mom |
+| Mia Torres, 9 | ENT (otitis media) | Defiant | Dismissive mom |
+| Leo Nguyen, 8 | Allergy (peanut + pollen) | Chatty | Pushy dad |
+
+Each is a full package — age-coherent chart, answer key, persona with dialogue,
+avatar. The Scenario Builder picks the matching patient for the chosen domain.
+Add more by dropping a `ScenarioPackage` in `lib/pedsim/scenarios/` and
+registering it in `scenarios/index.ts`.
+
 ## The rapport mechanic
 
 The child starts guarded (initial rapport 20, discloses at 55 for the shipped

@@ -128,10 +128,20 @@ export default function BuilderPage() {
               <Select
                 value={domain}
                 onValueChange={(v) => {
-                  setDomain(v as ContentDomain)
-                  setObjectives(
-                    DOMAINS[v as ContentDomain].default_objectives.join("\n"),
-                  )
+                  const dom = v as ContentDomain
+                  setDomain(dom)
+                  // Sync the form to the pre-generated patient for this domain so
+                  // the persona preview matches the scenario that will run.
+                  const match = scenariosForDomain(dom)[0]
+                  if (match) {
+                    const c = match.manifest.config
+                    setTemperament(c.temperament)
+                    setParentStyle(c.parent.style)
+                    setParentPresent(c.parent.present)
+                    setObjectives(c.learning_objectives.join("\n"))
+                  } else {
+                    setObjectives(DOMAINS[dom].default_objectives.join("\n"))
+                  }
                   setCommitted(false)
                 }}
               >

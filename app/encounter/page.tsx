@@ -99,6 +99,7 @@ export default function EncounterPage() {
 
   const persona = scenario.persona
   const threshold = persona.rapport.disclosure_threshold
+  const parentLabel = persona.parent.label ?? "Mom"
   const domainFacts = scenario.answer_key.key_facts.filter((f) => f.domain_relevant)
   const avatarUrl =
     (/^https?:\/\//.test(settings.avatarUrl) ? settings.avatarUrl : null) ||
@@ -160,12 +161,14 @@ export default function EncounterPage() {
   useEffect(() => {
     beginEncounter()
     if (transcript.length === 0) {
+      const poss =
+        scenario.manifest.patient.gender === "female" ? "her" : "his"
       appendTurns([
         {
           id: nanoid(),
           speaker: "system",
           ts: Date.now(),
-          text: `You enter the exam room. ${persona.child.name} is sitting on the table, swinging his legs and looking at the floor. His mother sits close beside him, looking worried.`,
+          text: `You enter the exam room. ${persona.child.name} is sitting on the exam table, swinging ${poss} legs. ${parentLabel} sits close by.`,
         },
       ])
     }
@@ -286,7 +289,7 @@ export default function EncounterPage() {
           {/* speaker chip */}
           {activeSpeaker && (
             <div className="absolute left-3 top-3 rounded-full bg-background/85 px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur">
-              {activeSpeaker === "child" ? persona.child.name : "Mom"}{" "}
+              {activeSpeaker === "child" ? persona.child.name : parentLabel}{" "}
               {speaking && <span className="animate-pulse">🔊</span>}
             </div>
           )}
@@ -327,9 +330,11 @@ export default function EncounterPage() {
         {caption && (
           <div className="shrink-0 border-b border-border bg-secondary/40 px-4 py-2 text-center text-sm">
             <span className="font-medium text-muted-foreground">
-              {activeSpeaker === "parent" ? "Mom: " : `${persona.child.name}: `}
+              {activeSpeaker === "parent"
+                ? `${parentLabel}: `
+                : `${persona.child.name}: `}
             </span>
-            {caption.replace(/^\s*mom\s*:\s*/i, "")}
+            {caption.replace(/^\s*(mom|dad)\s*:\s*/i, "")}
           </div>
         )}
 
@@ -362,7 +367,12 @@ export default function EncounterPage() {
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {transcript.map((t) => (
-            <Bubble key={t.id} turn={t} childName={persona.child.name} />
+            <Bubble
+              key={t.id}
+              turn={t}
+              childName={persona.child.name}
+              parentLabel={parentLabel}
+            />
           ))}
           {pending && (
             <Bubble
@@ -373,6 +383,7 @@ export default function EncounterPage() {
                 ts: 0,
               }}
               childName={persona.child.name}
+              parentLabel={parentLabel}
             />
           )}
           {sending && (
@@ -387,18 +398,21 @@ export default function EncounterPage() {
           )}
         </div>
 
-        {/* Suggestions */}
+        {/* Suggestions (parent label adapts per scenario) */}
         <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => send(s)}
-              disabled={sending}
-              className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
-            >
-              {s.length > 42 ? s.slice(0, 40) + "…" : s}
-            </button>
-          ))}
+          {SUGGESTIONS.map((raw) => {
+            const s = raw.replace(/\bMom\b/g, parentLabel)
+            return (
+              <button
+                key={raw}
+                onClick={() => send(s)}
+                disabled={sending}
+                className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+              >
+                {s.length > 42 ? s.slice(0, 40) + "…" : s}
+              </button>
+            )
+          })}
         </div>
 
         {/* Input */}
@@ -531,9 +545,11 @@ function RapportMeter({ value, threshold }: { value: number; threshold: number }
 function Bubble({
   turn,
   childName,
+  parentLabel = "Mom",
 }: {
   turn: TranscriptTurn
   childName: string
+  parentLabel?: string
 }) {
   if (turn.speaker === "system") {
     return (
@@ -555,7 +571,7 @@ function Bubble({
               : "bg-accent/15 text-accent"
         }`}
       >
-        {isDoctor ? "Dr" : isParent ? "M" : childName[0]}
+        {isDoctor ? "Dr" : isParent ? parentLabel[0] : childName[0]}
       </span>
       <div className={`max-w-[78%] ${isDoctor ? "items-end" : ""}`}>
         <div
@@ -567,7 +583,7 @@ function Bubble({
                 : "rounded-tl-sm bg-secondary"
           }`}
         >
-          {turn.text}
+          {isParent ? `${parentLabel}: ${turn.text}` : turn.text}
         </div>
         {isDoctor &&
           (turn.appliedRules?.length || typeof turn.rapportDelta === "number") && (

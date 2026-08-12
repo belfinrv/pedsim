@@ -24,7 +24,9 @@ import {
 import type {
   AnswerKey,
   Chart,
+  ChildDialogue,
   KeyFact,
+  ParentDialogue,
   Persona,
   TranscriptTurn,
 } from "./types"
@@ -94,23 +96,65 @@ export interface TurnResult {
   parentOnlyStreak: number
 }
 
-// ── Deterministic child voice ─────────────────────────────────────────────
+// ── Deterministic child voice (data-driven) ───────────────────────────────
 
-function factLine(fact: KeyFact, disclosing: boolean): string {
+// Respiratory-shy default; any scenario overrides via persona.dialogue.
+const DEFAULT_CHILD_DIALOGUE: Required<ChildDialogue> = {
+  greetingOpen: "Hi. *small smile*",
+  greetingGuarded: "*quietly* ...hi. *looks at Mom*",
+  interestsOpen:
+    "*small smile* I like dinosaurs... and Minecraft. I built a whole castle.",
+  interestsGuarded: "*quietly* ...I like dinosaurs, I guess.",
+  feelingsAck: "*nods a little* ...okay. Thank you.",
+  chiefOpen:
+    "Yeah... I've been coughing a lot, especially at night. My chest feels kinda tight and it hurts a little when I cough.",
+  chiefGuarded: "*small cough* My chest feels yucky.",
+  priorEpisode:
+    "Um... I got sick like this last year too. I had a really bad cough and the doctor said it was in my chest.",
+  medication:
+    "Mommy gives me the purple medicine before bed. It tastes yucky but it helps me stop coughing so I can sleep.",
+  allergyFact: "I can't have some stuff... it makes me itchy.",
+  noAllergy: "No... I don't think I'm allergic to anything.",
+  genericSymptomOpen: "I feel kind of tired, and coughing makes my throat sore.",
+  genericSymptomGuarded: "*quietly* ...I dunno. A little bad, I guess.",
+  medicationUnknownGuarded: "*looks at Mom* ...um, I don't know.",
+  counselingOpen: "*nods* Okay. Will the medicine make my cough go away?",
+  counselingGuarded: "*nods slowly* ...okay.",
+  withhold: "*shrugs* ...I don't really wanna talk about it.",
+  withdrawn: "*stays quiet, looking down at the floor*",
+  jargonConfused:
+    "*glances at Mom, looking confused* ...I don't know what that word means.",
+  fillerOpen: "Okay. *nods*",
+  fillerGuarded: "*looks down* ...um.",
+}
+
+// Parent lines carry no speaker prefix — the UI labels them from parent.label.
+const DEFAULT_PARENT_DIALOGUE: Required<ParentDialogue> = {
+  reassured: "Oh... okay. Thank you, doctor. That makes me feel a little better.",
+  withdrawn: "He gets shy with new people — should I just answer for him?",
+  medication:
+    "I've been giving him that cough syrup every night — that's okay, right? I read online it can be dangerous for little kids...",
+  symptom:
+    "Doctor, is it his lungs? My nephew ended up in the hospital with pneumonia. Should we be worried?",
+}
+
+function dialogueFor(ctx: TurnContext): Required<ChildDialogue> {
+  return { ...DEFAULT_CHILD_DIALOGUE, ...(ctx.persona.dialogue ?? {}) }
+}
+
+function factLine(
+  fact: KeyFact,
+  disclosing: boolean,
+  D: Required<ChildDialogue>,
+): string {
   if (fact.category === "condition" && /\(active\)/.test(fact.fact)) {
-    return disclosing
-      ? "Yeah... I've been coughing a lot, especially at night. My chest feels kinda tight and it hurts a little when I cough."
-      : "*small cough* My chest feels yucky."
+    return disclosing ? D.chiefOpen : D.chiefGuarded
   }
   if (fact.category === "condition" && /\(resolved\)/.test(fact.fact)) {
-    return "Um... I got sick like this last year too. I had a really bad cough and the doctor said it was in my chest."
+    return D.priorEpisode
   }
-  if (fact.category === "medication") {
-    return "Mommy gives me the purple medicine before bed. It tastes yucky but it helps me stop coughing so I can sleep."
-  }
-  if (fact.category === "allergy") {
-    return "I can't have some stuff... it makes me itchy."
-  }
+  if (fact.category === "medication") return D.medication
+  if (fact.category === "allergy") return D.allergyFact
   return "..."
 }
 
@@ -121,46 +165,29 @@ function deterministicChild(
 ): { text: string; surfaced: string[] } {
   const s = analyzeUtterance(utterance, ctx.persona.child.name)
   const disclosing = comp.disclosing
+  const D = dialogueFor(ctx)
   const surfaced: string[] = []
 
-  if (comp.withdrawn) {
-    return { text: "*stays quiet, looking down at the floor*", surfaced }
-  }
-
-  if (s.usesJargon) {
-    return {
-      text: "*glances at Mom, looking confused* ...I don't know what that word means.",
-      surfaced,
-    }
-  }
+  if (comp.withdrawn) return { text: D.withdrawn, surfaced }
+  if (s.usesJargon) return { text: D.jargonConfused, surfaced }
 
   // Greeting / rapport-building openers.
   const isOpener =
     (s.warmGreeting || s.introducesSelf || s.asksInterests) &&
     comp.intents.includes("none")
   if (isOpener) {
-    if (s.asksInterests) {
+    if (s.asksInterests)
       return {
-        text: disclosing
-          ? "*small smile* I like dinosaurs... and Minecraft. I built a whole castle."
-          : "*quietly* ...I like dinosaurs, I guess.",
+        text: disclosing ? D.interestsOpen : D.interestsGuarded,
         surfaced,
       }
-    }
-    if (s.acknowledgesFeelings) {
-      return { text: "*nods a little* ...okay. Thank you.", surfaced }
-    }
-    return {
-      text: disclosing ? "Hi. *small smile*" : "*quietly* ...hi. *looks at Mom*",
-      surfaced,
-    }
+    if (s.acknowledgesFeelings) return { text: D.feelingsAck, surfaced }
+    return { text: disclosing ? D.greetingOpen : D.greetingGuarded, surfaced }
   }
 
-  // Elicited facts.
+  // Elicited facts (surface at most one per turn, chief complaint first).
   const eligible = comp.eligible
   if (eligible.length > 0) {
-    // Surface at most one fact per turn, most-relevant first, to keep the
-    // history-taking gradual and realistic.
     const ordered = [...eligible].sort((a, b) => {
       const ra = isReadilyDisclosed(a) ? 0 : 1
       const rb = isReadilyDisclosed(b) ? 0 : 1
@@ -168,45 +195,37 @@ function deterministicChild(
     })
     const chosen = ordered[0]
     surfaced.push(chosen.id)
-    let line = factLine(chosen, disclosing)
+    let line = factLine(chosen, disclosing, D)
     if (!disclosing && !isReadilyDisclosed(chosen)) {
-      // Sensitive fact but below threshold — withhold.
-      surfaced.pop()
-      line = "*shrugs* ...I don't really wanna talk about it."
+      surfaced.pop() // sensitive fact, below threshold — withhold
+      line = D.withhold
     }
     return { text: line, surfaced }
   }
 
-  // Doctor asked a question type with no matching key fact.
-  if (comp.intents.includes("allergy")) {
-    return { text: "No... I don't think I'm allergic to anything.", surfaced }
-  }
-  if (comp.intents.includes("medication") && !disclosing) {
-    return { text: "*looks at Mom* ...um, I don't know.", surfaced }
-  }
-  if (comp.intents.includes("symptom")) {
+  // Question type with no matching key fact.
+  if (comp.intents.includes("allergy")) return { text: D.noAllergy, surfaced }
+  if (comp.intents.includes("medication") && !disclosing)
+    return { text: D.medicationUnknownGuarded, surfaced }
+  if (comp.intents.includes("symptom"))
     return {
-      text: disclosing
-        ? "I feel kind of tired, and coughing makes my throat sore."
-        : "*quietly* ...I dunno. A little bad, I guess.",
+      text: disclosing ? D.genericSymptomOpen : D.genericSymptomGuarded,
       surfaced,
     }
-  }
 
   // Counseling / closing.
-  if (s.honestAboutPlan || /\b(you have|it'?s called|we'?ll give|you'?ll be)\b/.test(utterance.toLowerCase())) {
+  if (
+    s.honestAboutPlan ||
+    /\b(you have|it'?s called|we'?ll give|you'?ll be)\b/.test(
+      utterance.toLowerCase(),
+    )
+  )
     return {
-      text: disclosing
-        ? "*nods* Okay. Will the medicine make my cough go away?"
-        : "*nods slowly* ...okay.",
+      text: disclosing ? D.counselingOpen : D.counselingGuarded,
       surfaced,
     }
-  }
 
-  return {
-    text: disclosing ? "Okay. *nods*" : "*looks down* ...um.",
-    surfaced,
-  }
+  return { text: disclosing ? D.fillerOpen : D.fillerGuarded, surfaced }
 }
 
 function deterministicParent(
@@ -215,32 +234,19 @@ function deterministicParent(
   doctorUtterance: string,
 ): string | null {
   if (!ctx.persona.parent.present) return null
-  if (ctx.persona.parent.style !== "anxious") {
-    // Minimal handling for other styles in the prototype.
-    if (ctx.persona.parent.style === "pushy" && comp.intents.includes("symptom"))
-      return "Mom: Shouldn't he just be on antibiotics, doctor? I don't want to wait around."
-    if (ctx.persona.parent.style === "dismissive" && comp.intents.includes("symptom"))
-      return "Mom: Honestly, I think he's fine — kids cough all the time. Can we make this quick?"
-    return null
-  }
+  const PD = { ...DEFAULT_PARENT_DIALOGUE, ...(ctx.persona.parent.dialogue ?? {}) }
+  const pick = (line: string) => (line?.trim() ? line : null)
 
   const u = doctorUtterance.toLowerCase()
   const reassured =
-    /\b(don'?t worry|not serious|mild|common|he'?ll be (fine|okay)|nothing to worry|reassur|it'?s okay|good news)\b/.test(
+    /\b(don'?t worry|not serious|mild|common|(he|she)'?ll be (fine|okay)|nothing to worry|reassur|it'?s okay|good news)\b/.test(
       u,
     )
-  if (reassured) {
-    return "Mom: Oh... okay. Thank you, doctor. That makes me feel a little better."
-  }
-  if (comp.withdrawn) {
-    return "Mom: He gets shy with new people — should I just answer for him?"
-  }
-  if (comp.intents.includes("medication")) {
-    return "Mom: I've been giving him that cough syrup every night — that's okay, right? I read online it can be dangerous for little kids..."
-  }
-  if (comp.intents.includes("symptom") || comp.intents.includes("prior_history")) {
-    return "Mom: Doctor, is it his lungs? My nephew ended up in the hospital with pneumonia. Should we be worried?"
-  }
+  if (reassured) return pick(PD.reassured)
+  if (comp.withdrawn) return pick(PD.withdrawn)
+  if (comp.intents.includes("medication")) return pick(PD.medication)
+  if (comp.intents.includes("symptom") || comp.intents.includes("prior_history"))
+    return pick(PD.symptom)
   return null
 }
 
