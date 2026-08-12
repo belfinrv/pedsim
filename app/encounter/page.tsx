@@ -82,7 +82,7 @@ export default function EncounterPage() {
     setPending(utterance)
     setSending(true)
     try {
-      const res = await fetch("/api/pedsim/engine", {
+      const res = await fetch("/api/engine", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

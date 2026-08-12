@@ -42,7 +42,7 @@ export default function ReportPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/pedsim/score", {
+      const res = await fetch("/api/score", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
